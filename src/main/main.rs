@@ -8,8 +8,8 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
 // OR CONDITIONS OF ANY KIND, either express or implied.
 
-use file_verification_code::FVC2Hasher;
 use file_verification_code::FVCHasher;
+use file_verification_code::FVC2Hasher;
 
 use std::env;
 

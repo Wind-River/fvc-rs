@@ -11,7 +11,7 @@ publish = false
 [dependencies]
 hex = "0.4.3"
 hex-literal = "0.4.1"
-sha2 = { version = "0.10.6", default-features = true }
+sha2 = "0.10.6"
 
 [lib]
 name = "file_verification_code"
@@ -19,4 +19,4 @@ path = "src/lib/lib.rs"
 
 [[bin]]
 name = "fvc"
-path = "src/bin/bin.rs"
+path = "src/main/main.rs"
