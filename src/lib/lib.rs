@@ -94,6 +94,29 @@ impl FVCHasher for FVC2Hasher {
 
 // Allows FVC2Hasher to take sha256s directly
 impl FVCSha256Hasher for FVC2Hasher {
+    /// read_sha256 takes a sha256 directly and stores for later use in the FVC2Hasher
+    /// 
+    /// # Exmaples
+    /// 
+    /// ```
+    /// use file_verification_code::FVCHasher;
+    /// use file_verification_code::FVC2Hasher;
+    /// use file_verification_code::FVCSha256Hasher;
+    /// use hex_literal::hex;
+    /// let foo_sha256 = hex!("b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c");
+    /// let bar_sha256 = hex!("7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730");
+    /// let zap_sha256 = hex!("a121b45bde6824e7ffd72c814e545a35e13b687680ea4e62a4a4405ab23acb0b");
+    /// 
+    /// let sha256s = [foo_sha256, bar_sha256, zap_sha256];
+    /// 
+    /// let mut hasher = FVC2Hasher::new();
+    /// for sha256 in sha256s.iter() {
+    ///     hasher.read_sha256(*sha256);
+    /// }
+    /// 
+    /// let result = hasher.hex();
+    /// assert_eq!(result, "4656433200ad460448a5947428e2c3e98adfe45915d71f7a4b399910fed1022cc4e1cdc374");
+    /// ```
     fn read_sha256(&mut self, sha256: [u8; 32]) {
         // push sha256 directly and acknowledge vector is no longer sorted
         self.sha256s.push(sha256);
@@ -116,7 +139,7 @@ mod tests {
 
         let mut hasher = FVC2Hasher::new();
         for sha256 in sha256s.iter() {
-            hasher.read_sha256(*sha256)
+            hasher.read_sha256(*sha256);
         }
 
         let result = hasher.hex();
