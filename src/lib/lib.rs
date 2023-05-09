@@ -147,9 +147,9 @@ mod tests {
     }
     #[test]
     fn fvc2_hasher_foo_bar_zap() -> Result<(), std::io::Error> {
-        let foo_txt = include_bytes!("../../test/foo.txt");
-        let bar_txt = include_bytes!("../../test/bar.txt");
-        let zap_txt = include_bytes!("../../test/zap.txt");
+        let foo_txt = include_bytes!("test_data/foo.txt");
+        let bar_txt = include_bytes!("test_data/bar.txt");
+        let zap_txt = include_bytes!("test_data/zap.txt");
         let files = [foo_txt, bar_txt, zap_txt];
 
         let mut hasher = FVC2Hasher::new();
