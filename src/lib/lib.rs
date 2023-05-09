@@ -27,7 +27,7 @@ pub trait FVCHasher {
     fn hex(&mut self) -> String;
 }
 
-/// FVCSha256Hasher is to allow FVCHasher's whose end-goal is to calculate and store sha256s to take a sha256 directly
+/// FVCSha256Hasher allows sha256-based FVCHashers to take a sha256 directly instead of calculating it again
 pub trait FVCSha256Hasher: FVCHasher {
     /// read_sha256 takes a sha256 directly and stores for later use in its FVCHasher
     fn read_sha256(&mut self, sha256: [u8; 32]);
