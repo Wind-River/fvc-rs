@@ -6,7 +6,7 @@ license = "Apache-2.0"
 # license-file = "LICENSE.txt"
 authors = ["Justin Yeo <justin.yeo@windriver.com"]
 description = "A library used to calculate file verification codes used to identify file collections that may contain the same files but be packaged differently"
-repository = "TODO"
+repository = "https://gitlab.aws-eu-north-1.devstar.cloud/WestStar/libraries/rust/file-verification-code"
 publish = false
 [dependencies]
 hex = "0.4.3"
