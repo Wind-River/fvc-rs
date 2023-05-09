@@ -1,0 +1,22 @@
+[package]
+name = "file_verification_code"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+# license-file = "LICENSE.txt"
+authors = ["Justin Yeo <justin.yeo@windriver.com"]
+description = "A library used to calculate file verification codes used to identify file collections that may contain the same files but be packaged differently"
+repository = "TODO"
+publish = false
+[dependencies]
+hex = "0.4.3"
+hex-literal = "0.4.1"
+sha2 = { version = "0.10.6", default-features = true }
+
+[lib]
+name = "file_verification_code"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "fvc"
+path = "src/bin/bin.rs"
