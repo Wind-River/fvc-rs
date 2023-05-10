@@ -13,7 +13,9 @@ publish = false
 clap = { version="4.2.7", features=["derive"]}
 hex = "0.4.3"
 hex-literal = "0.4.1"
+libarchive = "0.1.1"
 sha2 = "0.10.6"
+tempdir = "0.3.7"
 walkdir = "2.3.3"
 
 [lib]
