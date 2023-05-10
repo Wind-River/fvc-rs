@@ -10,9 +10,11 @@ repository = "https://gitlab.aws-eu-north-1.devstar.cloud/WestStar/libraries/rus
 publish = false
 
 [dependencies]
+clap = { version="4.2.7", features=["derive"]}
 hex = "0.4.3"
 hex-literal = "0.4.1"
 sha2 = "0.10.6"
+walkdir = "2.3.3"
 
 [lib]
 name = "file_verification_code"
