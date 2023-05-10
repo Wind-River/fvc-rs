@@ -70,8 +70,12 @@ fn main() {
         },
         None => {
             // Print to stdout
-            eprint!("FVC: ");
-            println!("{}", hasher.hex());        
+            if cli.binary_mode {
+                std::io::stdout().write_all(&hasher.sum()[..]).expect("writing binary to stdout");
+            } else {
+                eprint!("FVC: ");
+                println!("{}", hasher.hex());        
+            }
         }
     }
 }
