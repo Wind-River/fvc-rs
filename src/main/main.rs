@@ -113,19 +113,10 @@ fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> std::
                 eprintln!("Adding directory \"{}\"", path.display());
             }
 
-            for entry in WalkDir::new(path).into_iter() {
+            for entry in WalkDir::new(path) {
                 let entry = match entry {
                     Ok(dir_entry) => dir_entry,
                     Err(err) => {
-                        match err.loop_ancestor() { // TODO this implies walkdir follows symlinks, can this be turned off?
-                            Some(ancestor) => {
-                                if cli.log_verbose() {
-                                    eprintln!("Infinite loop detected at {}", ancestor.display());
-                                }
-                            },
-                            None => ()
-                        }
-
                         return Err(err.into()); // walkdir::Error is a light wrapper around std::io::Error
                     }
                 };
