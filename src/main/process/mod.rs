@@ -22,8 +22,6 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
 
         if stat.is_file() {
             if is_extractable(path) > 0. {
-                // if this TempDir value is moved it may not close itself correctly
-                // this either needs integration tests or to be explicitly closed where the error can be checked for
                 let tmp = match tempdir::TempDir::new("") {
                     Ok(tmp) => tmp,
                     Err(err) => return Err(err)
@@ -45,6 +43,8 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
                         eprintln!("error reading archive {:#?}", err);
                     }
                 };
+                // if we rely on tmp destructor to clean, errors are ignored
+                tmp.close().expect("closing extracted tempdir");
             } else {
                 if cli.log_verbose() {
                     eprintln!("Adding file \"{}\"", path.display());
