@@ -1,3 +1,5 @@
+//! extract calls libarchive to extract the given archive
+
 use std::path::Path;
 use libarchive::reader::Builder;
 
@@ -7,6 +9,7 @@ pub enum ExtractResult {
     ArchiveError(libarchive::error::ArchiveError)
 }
 
+/// extract_archive uses libarchive to extract src to dst
 pub fn extract_archive(src: &Path, dst: &Path) -> ExtractResult {
     let mut builder = Builder::default();
     builder.support_format(libarchive::archive::ReadFormat::All).expect("support all formats");

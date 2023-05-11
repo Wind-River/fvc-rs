@@ -8,23 +8,25 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
 // OR CONDITIONS OF ANY KIND, either express or implied.
 
+//! `fvc` is a utility that will collect all the files it is given and calculate a file verification code of all of them
+
+// local imports
 mod process;
 use process::calculate_fvc;
-
 use file_verification_code::FVCHasher;
 use file_verification_code::FVC2Hasher;
+// external imports
 use std::io::Write;
 use clap::Parser;
-
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(version=None)] // causes version to be read from Cargo.toml
 #[command(about="Calculate file verification code of given files")]
 pub struct CLI {
-    #[arg(short='b', long="binary")]
+    #[arg(short='b', long="binary", help="Output FVC in binary form instead of hex-encoded string")]
     binary_mode: bool,
-    #[arg(short='v', long="verbose", action=clap::ArgAction::Count)]
+    #[arg(short='v', long="verbose", help="Include more v's for higher verbosity", action=clap::ArgAction::Count)]
     verbose: u8,
     #[arg(short='e', long="examples")]
     show_examples: bool,
@@ -55,6 +57,7 @@ fn main() {
         eprintln!("CLI: {:?}", cli);
     }
 
+    // traverse given files and calculate file verification code of all of them
     let mut hasher = FVC2Hasher::new();
     calculate_fvc(&cli, &mut hasher, &cli.files[..]).expect("processing given files");
 

@@ -1,8 +1,9 @@
+// internal imports
 mod extract;
 use extract::{extract_archive, ExtractResult};
-
 use crate::{CLI, FVCHasher, FVC2Hasher};
 
+// external imports
 use walkdir::WalkDir;
 use std::fs::{metadata, File};
 use std::path::{Path, PathBuf};
@@ -21,7 +22,8 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
 
         if stat.is_file() {
             if is_extractable(path) > 0. {
-                eprintln!("TODO extract archive");
+                // if this TempDir value is moved it may not close itself correctly
+                // this either needs integration tests or to be explicitly closed where the error can be checked for
                 let tmp = match tempdir::TempDir::new("") {
                     Ok(tmp) => tmp,
                     Err(err) => return Err(err)
@@ -31,7 +33,7 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
                         if cli.log_verbose() {
                             eprintln!("extracted archive {}", path.display());
                         }
-                        match calculate_fvc(&cli, hasher, &[tmp.into_path()]) {
+                        match calculate_fvc(&cli, hasher, &[tmp.path().to_owned()]) {
                             Ok(()) => (),
                             Err(err) => {
                                 eprintln!("error processing extract archive {:#?}", err);
@@ -106,15 +108,16 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
     return Ok(())
 }
 
+// list of known archive extensions
 const VALID_EXTENSIONS: &'static [&'static str] = &["ar", "arj", "cpio", "dump", "jar", "7z", "zip", "pack", "pack2000", "tar", "bz2", "gz", "lzma", "snz", "xz", "z", "tgz", "rpm", "gem", "deb", "whl", "apk", "zst"];
 
 /// is_extractable looks at the file extension, and possibly the context of files around it, to guess whether that file is an extractable file
-fn is_extractable(path: &Path) -> f32 {
+pub fn is_extractable(path: &Path) -> f32 {
     match path.extension() {
         None => 0.,
         Some(ext) => {
             match ext.to_str() {
-                None => 0.,
+                None => 0., // no extension
                 Some(s) => {
                     if s == "pack" {
                         // TODOC, I think I was checking here whether it was a git pack file or a pack2000
