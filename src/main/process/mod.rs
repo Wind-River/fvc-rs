@@ -1,6 +1,6 @@
 // internal imports
 mod extract;
-use extract::{extract_archive, ExtractResult};
+use extract::extract_archive;
 use crate::{CLI, FVCHasher, FVC2Hasher};
 
 // external imports
@@ -27,7 +27,7 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
                     Err(err) => return Err(err)
                 };
                 match extract_archive(&path, tmp.path()) {
-                    ExtractResult::Ok => {
+                    Ok(()) => {
                         if cli.log_verbose() {
                             eprintln!("extracted archive {}", path.display());
                         }
@@ -39,7 +39,7 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
                             }
                         };
                     },
-                    ExtractResult::ArchiveError(err) => {
+                    Err(err) => {
                         eprintln!("error reading archive {:#?}", err);
                     }
                 };
