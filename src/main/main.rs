@@ -19,6 +19,7 @@ use file_verification_code::FVC2Hasher;
 use std::io::Write;
 use clap::Parser;
 use std::path::PathBuf;
+use log::{debug};
 
 #[derive(Parser, Debug)]
 #[command(version=None)] // causes version to be read from Cargo.toml
@@ -48,14 +49,29 @@ impl CLI {
 fn main() {
     let cli = CLI::parse();
 
+    stderrlog::new()
+        .module(module_path!())
+        .verbosity(match cli.verbose {
+            0 => log::Level::Warn, // Start with Error and Warn
+            1 => log::Level::Info,
+            2 => log::Level::Debug,
+            _ => log::Level::Trace // 3 or higher
+        })
+        .timestamp(match cli.verbose {
+            0 => stderrlog::Timestamp::Off,
+            1 => stderrlog::Timestamp::Off,
+            2 => stderrlog::Timestamp::Second,
+            _ => stderrlog::Timestamp::Millisecond // 3 or higher
+        })
+        .init()
+        .expect("initializing logger");
+
     if cli.show_examples {
         eprintln!("TODO show examples");
         std::process::exit(0);
     }
 
-    if cli.log_debug() {
-        eprintln!("CLI: {:?}", cli);
-    }
+    debug!("CLI: {:?}", cli);
 
     // traverse given files and calculate file verification code of all of them
     let mut hasher = FVC2Hasher::new();

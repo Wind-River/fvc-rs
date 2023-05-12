@@ -7,6 +7,7 @@ use crate::{CLI, FVCHasher, FVC2Hasher};
 use walkdir::WalkDir;
 use std::fs::{metadata, File};
 use std::path::{Path, PathBuf};
+use log::{error, info, trace};
 
 /// calculate_fvc iterates over the given files and adds them to the FVCHasher, or extracts and/or walk given archives/directories and does the same for their files.
 /// The actual fvc at the end can be obtained from the given hasher.
@@ -28,27 +29,23 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
                 };
                 match extract_archive(&path, tmp.path()) {
                     Ok(()) => {
-                        if cli.log_verbose() {
-                            eprintln!("extracted archive {}", path.display());
-                        }
+                        info!("extracted archive {}", path.display());
                         match calculate_fvc(&cli, hasher, &[tmp.path().to_owned()]) {
                             Ok(()) => (),
                             Err(err) => {
-                                eprintln!("error processing extract archive {:#?}", err);
+                                error!("error processing extract archive {:#?}", err);
                                 return Err(err)
                             }
                         };
                     },
                     Err(err) => {
-                        eprintln!("error reading archive {:#?}", err);
+                        error!("error reading archive {:#?}", err);
                     }
                 };
                 // if we rely on tmp destructor to clean, errors are ignored
                 tmp.close().expect("closing extracted tempdir");
             } else {
-                if cli.log_verbose() {
-                    eprintln!("Adding file \"{}\"", path.display());
-                }
+                info!("Adding file \"{}\"", path.display());
                 // open file
                 let file = match File::open(path) {
                     Ok(file) => file,
@@ -66,9 +63,7 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
                 }
             }
         } else if stat.is_dir() {
-            if cli.log_verbose() {
-                eprintln!("Adding directory \"{}\"", path.display());
-            }
+            info!("Adding directory \"{}\"", path.display());
 
             for entry in WalkDir::new(path) {
                 let entry = match entry {
@@ -79,9 +74,7 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
                 };
 
                 if entry.file_type().is_file() {
-                    if cli.log_debug() {
-                        eprintln!("Adding file \"{}\" from directory \"{}\"", entry.path().display(), path.display());
-                    }
+                    trace!("Adding file \"{}\" from directory \"{}\"", entry.path().display(), path.display());
                     // open file
                     let file = match File::open(entry.path()) {
                         Ok(file) => file,
@@ -99,9 +92,7 @@ pub fn calculate_fvc(cli: &CLI, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> s
                 }
             }
         } else {
-            if cli.log_verbose() {
-                eprintln!("Skipping irregular file {}", path.display());
-            }
+            info!("Skipping irregular file {}", path.display());
         }
     }
 
