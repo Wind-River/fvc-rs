@@ -20,30 +20,56 @@ use std::io::Write;
 use clap::Parser;
 use std::path::PathBuf;
 use log::{debug};
+use colored::Colorize;
 
 #[derive(Parser, Debug)]
-#[command(version=None)] // causes version to be read from Cargo.toml
+#[command(version)] // causes version to be read from Cargo.toml
+#[command(disable_version_flag=true)] // since we use v for verbosity, we need to manually define the version flag
 #[command(about="Calculate file verification code of given files")]
+#[command(after_help=examples_string())]
+#[command(arg_required_else_help=true)]
 pub struct CLI {
-    #[arg(short='b', long="binary", help="Output FVC in binary form instead of hex-encoded string")]
-    binary_mode: bool,
+    #[arg(long, action=clap::ArgAction::Version)] // manually define --version flag since we are using v for verbosity
+    #[arg(short='e', long="examples", action=clap::ArgAction::SetTrue)]
+    show_examples: bool,
+    // since neither -h nor --help are in use, help arg is auto-generated
+
     #[arg(short='v', long="verbose", help="Include more v's for higher verbosity", action=clap::ArgAction::Count)]
     verbose: u8,
-    #[arg(short='e', long="examples")]
-    show_examples: bool,
+    #[arg(short='b', long="binary", help="Output FVC in binary form instead of hex-encoded string")]
+    binary_mode: bool,
     #[arg(short, long, help="Output to given file")]
     output: Option<PathBuf>,
-    #[arg(required=true, help="Files or directory of files to calculate file verification code of")]
+    #[arg(help="Files or directory of files to calculate file verification code of")]
     files: Vec<PathBuf>,
 }
 
-impl CLI {
-    pub fn log_verbose(&self) -> bool {
-        self.verbose > 0
-    }
-    pub fn log_debug(&self) -> bool {
-        self.verbose > 1
-    }
+fn examples_string() -> String {
+    format!(r#"{header}
+Calculate File Verification Code of all text files in a directory
+    {prompt}fvc src/main/test_data/*.txt
+    FVC: 4656433200ad460448a5947428e2c3e98adfe45915d71f7a4b399910fed1022cc4e1cdc374
+
+Calculate File Verification Code of a directory's contents
+    {prompt}fvc src/main/test_data/
+    FVC: 465643320080906dab16c118543c5b8ce2f5a819ae1e690b992e04f5f61f73f1886a3037ba
+
+Calculate File Verification Code of all text files under a directory and of a directory's contents
+    {prompt}fvc src/main/test_data/*.txt src/main/test_data/A/
+    FVC: 4656433200739776f8fabb193aa2b9df1579e27e42453164bd519d17f191e02a7485a35b96
+
+Calculate File Verification Code of an archive
+    {prompt}fvc src/main/test_data/foo_bar_zap.tar.gz
+    FVC: 4656433200ad460448a5947428e2c3e98adfe45915d71f7a4b399910fed1022cc4e1cdc374
+
+Write a binary File Verification Code to a file
+    {prompt}fvc -b -o /tmp/fvc src/main/test_data/*.txt
+
+Redirect a binary File Verification Code to a file
+    {prompt}fvc -b src/main/test_data/*.txt > /tmp/fvc
+    "#, 
+    header="Examples:".bold().underline(),
+    prompt="> ".bold())
 }
 
 fn main() {
@@ -67,7 +93,7 @@ fn main() {
         .expect("initializing logger");
 
     if cli.show_examples {
-        eprintln!("TODO show examples");
+        eprintln!("{}", examples_string());
         std::process::exit(0);
     }
 
