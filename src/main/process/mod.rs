@@ -140,9 +140,11 @@ fn process_archive(hasher: &mut FVC2Hasher, extract_policy: ExtractPolicy,archiv
             };
         },
         Err(err) => {
-            if extract_policy != ExtractPolicy::All {
-                // Don't spam warnings if we're trying to extract literally every file
-                warn!("error extracting {}, treating as file: {}", archive_path.display(), err);
+            match extract_policy {
+                // If we're trying to extract every file, log as trace instead of warn
+                ExtractPolicy::All => trace!("error extracting {}, treating as file: {}", archive_path.display(), err),
+                // Warn when an extraction that we reasonably expected to succeed, instead fails and is treated as a file
+                _ => warn!("error extracting {}, treating as file: {}", archive_path.display(), err)
             }
             return process_file(hasher, archive_path);
         }
