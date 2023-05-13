@@ -58,6 +58,7 @@ pub fn calculate_fvc(hasher: &mut FVC2Hasher, extract_policy: ExtractPolicy, fil
                     }
                 };
 
+                // only process files
                 if entry.file_type().is_file() {
                     match extract_or_process_file(hasher, extract_policy, entry.path()) {
                         Ok(()) => (),
@@ -75,6 +76,10 @@ pub fn calculate_fvc(hasher: &mut FVC2Hasher, extract_policy: ExtractPolicy, fil
     return Ok(())
 }
 
+// extract_or_process_file looks at a path and applies the given extraction policy
+// On the extremes ExtractPolicy::None and ExtractPolicy::All will always or never process a path as an archive
+// ExtractPolicy::Extension will look at the file extension and extract it if it looks like an archive, otherwise it will process it as a file
+// In every case, if an archive fails to extract, it is treated as a file
 fn extract_or_process_file(hasher: &mut FVC2Hasher, extract_policy: ExtractPolicy, file_path: &Path) -> std::io::Result<()> {
     match (extract_policy, is_extractable(file_path)) {
         (ExtractPolicy::Extension, 0) | (ExtractPolicy::None, _) => {
@@ -101,6 +106,7 @@ fn extract_or_process_file(hasher: &mut FVC2Hasher, extract_policy: ExtractPolic
     }
 }
 
+// process_file opens the given file and gives it to the FVC2Hasher
 fn process_file(hasher: &mut FVC2Hasher, file_path: &Path) -> std::io::Result<()> {
     trace!("Adding file \"{}\"", file_path.display());
     // open file
@@ -120,7 +126,9 @@ fn process_file(hasher: &mut FVC2Hasher, file_path: &Path) -> std::io::Result<()
     }
 }
 
-fn process_archive(hasher: &mut FVC2Hasher, extract_policy: ExtractPolicy,archive_path: &Path) -> std::io::Result<()> {
+// process_archive tries to extract the given archive and process its contents
+// if it fails to extract it is passed off to process_file
+fn process_archive(hasher: &mut FVC2Hasher, extract_policy: ExtractPolicy, archive_path: &Path) -> std::io::Result<()> {
     let tmp_prefix = match archive_path.file_name() {
         Some(file_name) => format!("fvc_extracted_archive.{:?}", file_name),
         None => format!("fvc_extracted_archive.{:?}", archive_path)
@@ -165,8 +173,7 @@ pub fn is_extractable(path: &Path) -> u8 {
             match ext.to_str() {
                 None => 0, // no extension
                 Some(s) => {
-                    if s == "pack" {
-                        // TODOC, I think I was checking here whether it was a git pack file or a pack2000
+                    if s == "pack" { // If is a git pack file instead of pack200 file, it is not an archive
                         let mut idx_path = path.to_path_buf();
                         let has_idx = match idx_path.set_extension("idx") {
                             true => idx_path.exists(),
