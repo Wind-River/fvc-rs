@@ -10,12 +10,11 @@
 
 //! `fvc` is a utility that will collect all the files it is given and calculate a file verification code of all of them
 
-// local imports
 mod process;
-use process::calculate_fvc;
+use process::{calculate_fvc, ExtractPolicy};
 use file_verification_code::FVCHasher;
 use file_verification_code::FVC2Hasher;
-// external imports
+
 use std::io::Write;
 use clap::Parser;
 use std::path::PathBuf;
@@ -26,9 +25,9 @@ use colored::Colorize;
 #[command(version)] // causes version to be read from Cargo.toml
 #[command(disable_version_flag=true)] // since we use v for verbosity, we need to manually define the version flag
 #[command(about="Calculate file verification code of given files")]
-#[command(after_help=examples_string())]
+#[command(after_help=get_examples())]
 #[command(arg_required_else_help=true)]
-pub struct CLI {
+struct CLI {
     #[arg(long, action=clap::ArgAction::Version)] // manually define --version flag since we are using v for verbosity
     #[arg(short='e', long="examples", action=clap::ArgAction::SetTrue)]
     show_examples: bool,
@@ -40,11 +39,13 @@ pub struct CLI {
     binary_mode: bool,
     #[arg(short, long, help="Output to given file")]
     output: Option<PathBuf>,
+    #[arg(long, value_enum, default_value_t=ExtractPolicy::Extension, help="How to decide what files to try extracting")]
+    extract: ExtractPolicy, 
     #[arg(help="Files or directory of files to calculate file verification code of")]
     files: Vec<PathBuf>,
 }
 
-fn examples_string() -> String {
+fn get_examples() -> String {
     format!(r#"{header}
 Calculate File Verification Code of all text files in a directory
     {prompt}fvc src/main/test_data/*.txt
@@ -73,8 +74,9 @@ Redirect a binary File Verification Code to a file
 }
 
 fn main() {
-    let cli = CLI::parse();
+    let cli = CLI::parse(); // parse command line
 
+    // initialize logger
     stderrlog::new()
         .module(module_path!())
         .verbosity(match cli.verbose {
@@ -84,8 +86,7 @@ fn main() {
             _ => log::Level::Trace // 3 or higher
         })
         .timestamp(match cli.verbose {
-            0 => stderrlog::Timestamp::Off,
-            1 => stderrlog::Timestamp::Off,
+            0 | 1 => stderrlog::Timestamp::Off,
             2 => stderrlog::Timestamp::Second,
             _ => stderrlog::Timestamp::Millisecond // 3 or higher
         })
@@ -93,7 +94,8 @@ fn main() {
         .expect("initializing logger");
 
     if cli.show_examples {
-        eprintln!("{}", examples_string());
+        // print examples and exit
+        eprintln!("{}", get_examples());
         std::process::exit(0);
     }
 
@@ -101,7 +103,7 @@ fn main() {
 
     // traverse given files and calculate file verification code of all of them
     let mut hasher = FVC2Hasher::new();
-    calculate_fvc(&cli, &mut hasher, &cli.files[..]).expect("processing given files");
+    calculate_fvc(&mut hasher, cli.extract, &cli.files[..]).expect("processing given files");
 
     match cli.output {
         Some(path) => {
