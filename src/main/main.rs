@@ -11,7 +11,7 @@
 //! `fvc` is a utility that will collect all the files it is given and calculate a file verification code of all of them
 
 mod process;
-use process::{calculate_fvc, ExtractPolicy};
+use process::{Processor, ExtractPolicy};
 use file_verification_code::FVCHasher;
 use file_verification_code::FVC2Hasher;
 
@@ -39,12 +39,13 @@ struct CLI {
     binary_mode: bool,
     #[arg(short, long, help="Output to given file")]
     output: Option<PathBuf>,
-    #[arg(long, value_enum, default_value_t=ExtractPolicy::Extension, help="How to decide what files to try extracting")]
+    #[arg(long, value_enum, default_value_t=process::default_policy(), help="How to decide what files to try extracting")]
     extract: ExtractPolicy, 
     #[arg(help="Files or directory of files to calculate file verification code of")]
     files: Vec<PathBuf>,
 }
 
+// format an examples string stylized similarly to clap's help
 fn get_examples() -> String {
     format!(r#"{header}
 Calculate File Verification Code of all text files in a directory
@@ -103,7 +104,8 @@ fn main() {
 
     // traverse given files and calculate file verification code of all of them
     let mut hasher = FVC2Hasher::new();
-    calculate_fvc(&mut hasher, cli.extract, &cli.files[..]).expect("processing given files");
+    let processor = process::new(cli.extract);
+    processor.calculate_fvc(&mut hasher, &cli.files[..]).expect("processing given files");
 
     match cli.output {
         Some(path) => {

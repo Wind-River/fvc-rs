@@ -14,12 +14,15 @@ clap = { version="4.2.7", features=["derive"]}
 colored = "2.0.0"
 hex = "0.4.3"
 hex-literal = "0.4.1"
-libarchive = "0.1.1"
+libarchive = { version="0.1.1", optional=true }
 log = "0.4.17"
 sha2 = "0.10.6"
 stderrlog = "0.5.4"
 tempdir = "0.3.7"
 walkdir = "2.3.3"
+
+[features]
+extract = ["dep:libarchive"]
 
 [lib]
 name = "file_verification_code"
