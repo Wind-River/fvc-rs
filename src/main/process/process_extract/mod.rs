@@ -1,4 +1,12 @@
-use self::extract::is_extractable;
+// Copyright (c) 2020 Wind River Systems, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software distributed
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
+// OR CONDITIONS OF ANY KIND, either express or implied.
 
 use super::{ExtractPolicy, Processor, process_file};
 use crate::FVC2Hasher;
@@ -8,7 +16,7 @@ mod extract;
 
 use std::path::{Path, PathBuf};
 use std::fs::metadata;
-use log::{warn, error, info, debug, trace};
+use log::{info, debug, trace};
 use walkdir::WalkDir;
 use hex::ToHex;
 
@@ -24,7 +32,7 @@ impl Processor for ExtractionProcessor {
 
     fn calculate_fvc(self: &Self, hasher: &mut FVC2Hasher, files: &[PathBuf]) -> std::io::Result<()> {
         for path in files {
-            match self.calculate_fvc_of(&mut dag::ArchiveGraph::new(), None, hasher, path) {
+            match self.calculate_fvc_of(&mut dag::ArchiveGraph::new(), hasher, None, path) {
                 Ok(()) => (),
                 Err(err) => return Err(err)
             }
@@ -34,77 +42,38 @@ impl Processor for ExtractionProcessor {
     }
 }
 
-enum FileResult {
-    Ok,
-    File,
-    ExtractedArchive([u8; 32], PathBuf),
-    Error(std::io::Error),
-}
-
 impl ExtractionProcessor {
-    // process_archive tries to extract the given archive and process its contents
-    // if it fails to extract it is passed off to process_file
-    fn process_archive(self: &Self, hasher: &mut FVC2Hasher, extract_policy: ExtractPolicy, archive_path: &Path) -> std::io::Result<()> {
-        let tmp_prefix = match archive_path.file_name() {
-            Some(file_name) => format!("fvc_extracted_archive.{:?}", file_name),
-            None => format!("fvc_extracted_archive.{:?}", archive_path)
-        };
-        let tmp = match tempdir::TempDir::new(&tmp_prefix) {
-            Ok(tmp) => tmp,
-            Err(err) => return Err(err)
-        };
-        match extract::extract_archive(&archive_path, tmp.path()) {
-            Ok(()) => {
-                info!("extracted archive {}", archive_path.display());
-                match self.calculate_fvc(hasher, &[tmp.path().to_owned()]) {
-                    Ok(()) => (),
-                    Err(err) => {
-                        return Err(err)
-                    }
-                };
-            },
-            Err(err) => {
-                match extract_policy {
-                    // If we're trying to extract every file, log as trace instead of warn
-                    ExtractPolicy::All => trace!("error extracting {}, treating as file: {}", archive_path.display(), err),
-                    // Warn when an extraction that we reasonably expected to succeed, instead fails and is treated as a file
-                    _ => warn!("error extracting {}, treating as file: {}", archive_path.display(), err)
-                }
-                return process_file(hasher, archive_path);
-            }
-        };
-        // if we rely on tmp destructor to clean, errors are ignored
-        tmp.close().expect("closing extracted tempdir");
-        Ok(())
-    }
-
     // extract_or_process_file looks at a path and applies the given extraction policy
     // On the extremes ExtractPolicy::None and ExtractPolicy::All will always or never process a path as an archive
     // ExtractPolicy::Extension will look at the file extension and extract it if it looks like an archive, otherwise it will process it as a file
-    // In every case, if an archive fails to extract, it is treated as a file
-    //self: &Self, graph: &mut ArchiveGraph, current: Option<[u8; 32]>, hasher: &mut FVC2Hasher, filepath: &Path
-    fn extract_or_process_file(self: &Self, graph: &mut ArchiveGraph, current: Option<[u8; 32]>, hasher: &mut FVC2Hasher, file_path: &Path) -> std::io::Result<()> {
+    // The ArchiveGraph can skip looking at the path since it is already known to be an archive
+    // In every case, if an archive fails to extract, due to an extraction-specific error, it is treated as a file
+    // If a general IO error is encountered at any point, that is immediately returned
+    fn extract_or_process_file(self: &Self, graph: &mut ArchiveGraph, hasher: &mut FVC2Hasher, current: Option<[u8; 32]>, file_path: &Path) -> std::io::Result<()> {
         match self.extract_policy {
-            ExtractPolicy::None => return process_file(hasher, file_path),
+            ExtractPolicy::None => process_file(hasher, file_path), // nothing is to be extracted, immediately process as file
             ExtractPolicy::All | ExtractPolicy::Extension => {
+                // calculate sha256 to check if file is an already known archive
                 let sha256 = match get_sha256(file_path) {
                     Ok(sha256) => sha256,
                     Err(err) => return Err(err)
                 };
                 let known_archive = ArchiveGraph::contains(graph, sha256);
+
+                // if is an already known_archive, we might have a cycle
                 match (known_archive, current) {
                     (true, Some(current)) => {
                         // check for cycle
                         match graph.add_edge(current, sha256) {
                             EdgeResult::Ok => (),
                             EdgeResult::CycleDetected => return Ok(()), // exit early to avoid cycle
-                            EdgeResult::KeyMissing(key) => panic!("Key missing for known archive? {}", key.encode_hex::<String>())
+                            EdgeResult::KeyMissing(key) => panic!("key missing for known archive? {}", key.encode_hex::<String>())
                         };
 
                         // extract and process directory
                         match open_archive(file_path) {
                             ExtractResult::Ok(extracted_directory) => {
-                                match self.calculate_fvc_of(graph, Some(sha256), hasher, extracted_directory.path()) {
+                                match self.calculate_fvc_of(graph, hasher, Some(sha256), extracted_directory.path()) {
                                     Ok(()) => {
                                         match extracted_directory.close() { // clean up extraction
                                             Ok(()) => return Ok(()),
@@ -124,7 +93,7 @@ impl ExtractionProcessor {
                         // extract and process directory
                         match open_archive(file_path) {
                             ExtractResult::Ok(extracted_directory) => {
-                                match self.calculate_fvc_of(graph, Some(sha256), hasher, extracted_directory.path()) {
+                                match self.calculate_fvc_of(graph, hasher, Some(sha256), extracted_directory.path()) {
                                     Ok(()) => {
                                         match extracted_directory.close() { // clean up extraction
                                             Ok(()) => return Ok(()),
@@ -142,17 +111,18 @@ impl ExtractionProcessor {
                 };
 
                 // unknown if archive or file
+                // return early if archive was extracted and processed, otherwise fall to file process below
                 match (self.extract_policy, extract::is_extractable(file_path)) {
                     (ExtractPolicy::Extension, 0) => (),
                     (_, 100) => {
                         match open_archive(file_path) {
                             ExtractResult::IOError(err) => return Err(err),
                             ExtractResult::ArchiveError(_err) => {
-                                debug!("Error extracting 100 confidence archive: {}", file_path.display());
+                                debug!("error extracting 100 confidence archive: {}", file_path.display());
                             },
                             ExtractResult::Ok(extracted_directory) => {
                                 graph.insert(sha256);
-                                match self.calculate_fvc_of(graph, Some(sha256), hasher, extracted_directory.path()) {
+                                match self.calculate_fvc_of(graph, hasher, Some(sha256), extracted_directory.path()) {
                                     Ok(()) => {
                                         match extracted_directory.close() { // clean up extraction
                                             Ok(()) => return Ok(()),
@@ -171,7 +141,7 @@ impl ExtractionProcessor {
                             ExtractResult::ArchiveError(_err) => (),
                             ExtractResult::Ok(extracted_directory) => {
                                 graph.insert(sha256);
-                                match self.calculate_fvc_of(graph, Some(sha256), hasher, extracted_directory.path()) {
+                                match self.calculate_fvc_of(graph, hasher, Some(sha256), extracted_directory.path()) {
                                     Ok(()) => {
                                         match extracted_directory.close() { // clean up extraction
                                             Ok(()) => return Ok(()),
@@ -191,7 +161,9 @@ impl ExtractionProcessor {
         }
     }
 
-    fn calculate_fvc_of(self: &Self, graph: &mut ArchiveGraph, current: Option<[u8; 32]>, hasher: &mut FVC2Hasher, filepath: &Path) -> std::io::Result<()> {
+    // calculate_fvc_of acts like calculate_fvc, buts adds the ArchiveGraph and current archive to protect against quines
+    // the archive graph is a directed acyclic graph, and if a cycle is ever detected, that edge is not added, and thus that archive is not processed futher
+    fn calculate_fvc_of(self: &Self, graph: &mut ArchiveGraph, hasher: &mut FVC2Hasher, current: Option<[u8; 32]>, filepath: &Path) -> std::io::Result<()> {
         let stat = match metadata(filepath) {
             Ok(metadata) => metadata,
             Err(err) => {
@@ -200,7 +172,7 @@ impl ExtractionProcessor {
         };
 
         if stat.is_file() {
-            return self.extract_or_process_file(graph, current, hasher, filepath);            
+            return self.extract_or_process_file(graph, hasher, current, filepath);            
         } else if stat.is_dir() {
             info!("Adding directory \"{}\"", filepath.display());
 
@@ -215,7 +187,7 @@ impl ExtractionProcessor {
 
                 // only process files
                 if entry.file_type().is_file() {
-                    match self.extract_or_process_file(graph, current, hasher, entry.path()) {
+                    match self.extract_or_process_file(graph, hasher, current, entry.path()) {
                         Ok(()) => (),
                         Err(err) => return Err(err)
                     }
@@ -235,6 +207,7 @@ enum ExtractResult {
     ArchiveError(libarchive::error::ArchiveError)
 }
 
+// get_sha256 calculates and returns an array of bytes represeting the sha256 of the given file
 fn get_sha256(path: &Path) -> std::io::Result<[u8; 32]> {
     use sha2::{Sha256, Digest};
     use std::io::Read;
@@ -256,6 +229,8 @@ fn get_sha256(path: &Path) -> std::io::Result<[u8; 32]> {
     Ok(sha256)
 }
 
+// open archive creates a temporary directory and extracts the given archive to it
+// in the case of an extraction error, the temporary directory is cleaned-up here, otherwise it needs to be cleaned up by the receiever
 fn open_archive(archive_path: &Path) -> ExtractResult {
     let tmp_prefix = match archive_path.file_name() {
         Some(file_name) => format!("fvc_extracted_archive.{:?}", file_name),
