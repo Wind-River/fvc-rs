@@ -8,6 +8,7 @@ authors = ["Justin Yeo <justin.yeo@windriver.com"]
 description = "A library used to calculate file verification codes used to identify file collections that may contain the same files but be packaged differently"
 repository = "https://gitlab.aws-eu-north-1.devstar.cloud/WestStar/libraries/rust/file-verification-code"
 publish = false
+default-run = "fvc"
 
 [dependencies]
 clap = { version="4.2.7", features=["derive"]}
@@ -16,6 +17,9 @@ hex = "0.4.3"
 hex-literal = "0.4.1"
 libarchive = { version="0.1.1", optional=true }
 log = "0.4.17"
+serde = {version = "1.0.163", features = ["derive"] }
+serde-hex = "0.1.0"
+serde_json = "1.0.96"
 sha2 = "0.10.6"
 stderrlog = "0.5.4"
 tempdir = "0.3.7"
@@ -32,3 +36,8 @@ path = "src/lib/lib.rs"
 [[bin]]
 name = "fvc"
 path = "src/main/main.rs"
+
+[[bin]]
+name = "extractor"
+path = "src/extractor/main.rs"
+required-features = ["extract"]
