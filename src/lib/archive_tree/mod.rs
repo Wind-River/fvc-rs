@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::fs::metadata;
 
+use log::*;
 use serde::{Serialize, Deserialize};
 use serde_hex::{SerHex, Strict};
 
@@ -18,7 +19,7 @@ impl std::fmt::Debug for File {
         match serde_json::to_string(&self) {
             Ok(s) => write!(f, "{}", s),
             Err(err) => {
-                log::debug!("error formatting Debug File: {}", err);
+                debug!("error formatting Debug File: {}", err);
                 std::fmt::Result::Err(std::fmt::Error)
             }
         }
@@ -30,7 +31,7 @@ impl std::fmt::Display for File {
         match serde_json::to_string_pretty(&self) {
             Ok(s) => write!(f, "{}", s),
             Err(err) => {
-                log::debug!("error formatting Display File: {}", err);
+                debug!("error formatting Display File: {}", err);
                 std::fmt::Result::Err(std::fmt::Error)
             }
         }
@@ -83,7 +84,7 @@ impl std::fmt::Debug for Archive {
         match serde_json::to_string(&self) {
             Ok(s) => write!(f, "{}", s),
             Err(err) => {
-                log::debug!("error formatting Debug Archive: {}", err);
+                debug!("error formatting Debug Archive: {}", err);
                 std::fmt::Result::Err(std::fmt::Error)
             }
         }
@@ -95,7 +96,7 @@ impl std::fmt::Display for Archive {
         match serde_json::to_string_pretty(&self) {
             Ok(s) => write!(f, "{}", s),
             Err(err) => {
-                log::debug!("error formatting Display Archive: {}", err);
+                debug!("error formatting Display Archive: {}", err);
                 std::fmt::Result::Err(std::fmt::Error)
             }
         }
@@ -109,7 +110,7 @@ impl Archive {
             None => match std::fs::metadata(&source) {
                 Ok(metadata) => metadata.len(),
                 Err(err) => {
-                    log::debug!("source not found");
+                    debug!("source not found");
                     return Err(err);
                 }
             }
@@ -164,7 +165,7 @@ impl std::fmt::Debug for Directory {
         match serde_json::to_string(&self) {
             Ok(s) => write!(f, "{}", s),
             Err(err) => {
-                log::debug!("error formatting Debug Directory: {}", err);
+                debug!("error formatting Debug Directory: {}", err);
                 std::fmt::Result::Err(std::fmt::Error)
             }
         }
@@ -176,7 +177,7 @@ impl std::fmt::Display for Directory {
         match serde_json::to_string_pretty(&self) {
             Ok(s) => write!(f, "{}", s),
             Err(err) => {
-                log::debug!("error formatting Display Directory: {}", err);
+                debug!("error formatting Display Directory: {}", err);
                 std::fmt::Result::Err(std::fmt::Error)
             }
         }

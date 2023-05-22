@@ -8,7 +8,10 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
 // OR CONDITIONS OF ANY KIND, either express or implied.
 
-use super::{ExtractPolicy, Processor, process_file};
+//! Process given file paths and calculate file verification code
+//! Internally it creates archive trees, which can be later traversed and fed to the FVC library, or can be used for debugging
+
+use super::{ExtractPolicy, Processor};
 use crate::FVC2Hasher;
 use file_verification_code::FVCSha256Hasher;
 mod dag;
@@ -17,7 +20,7 @@ use file_verification_code::extract;
 
 use std::path::{Path, PathBuf};
 use std::fs::metadata;
-use log::{info, debug, trace};
+use log::*;
 use walkdir::WalkDir;
 use hex::ToHex;
 use file_verification_code::archive_tree::{Directory, Archive, File, Collection};
@@ -302,6 +305,7 @@ impl ExtractionProcessor {
         Ok(Collection::Empty)
     }
 
+    // hash_collection process the given collection and feeds its files to the FVC2Hasher
     fn hash_collection(hasher: &mut FVC2Hasher, collection: Collection) {
         match collection {
             Collection::Empty => (),

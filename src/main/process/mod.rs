@@ -8,11 +8,9 @@
 // under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
 // OR CONDITIONS OF ANY KIND, either express or implied.
 
-use crate::{FVCHasher, FVC2Hasher};
+use crate::FVC2Hasher;
 
-use std::fs::File;
-use std::path::{Path, PathBuf};
-use log::trace;
+use std::path::PathBuf;
 use clap::ValueEnum;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
@@ -54,25 +52,4 @@ pub fn new(extract_policy: ExtractPolicy) -> process::SimpleProcessor {
 #[cfg(not(feature = "extract"))]
 pub fn default_policy() -> ExtractPolicy {
     ExtractPolicy::None
-}
-
-
-// process_file opens the given file and gives it to the FVC2Hasher
-pub fn process_file(hasher: &mut FVC2Hasher, file_path: &Path) -> std::io::Result<()> {
-    trace!("Adding file \"{}\"", file_path.display());
-    // open file
-    let file = match File::open(file_path) {
-        Ok(file) => file,
-        Err(err) => {
-            eprintln!("{}", err);
-            std::process::exit(1);
-        }
-    };
-    // pass open file to hasher
-    match hasher.read(file) {
-        Ok(_size) => Ok(()),
-        Err(err) => {
-            return Err(err);
-        }
-    }
 }
