@@ -41,7 +41,9 @@ impl Processor for ExtractionProcessor {
             }
         }
 
-        debug!("collections: {:?}", &collections);
+        if log::log_enabled!(log::Level::Debug) {
+            debug!("collections: {}", serde_json::to_string(&collections)?);
+        }
 
         for collection in collections {
             ExtractionProcessor::hash_collection(hasher, collection);

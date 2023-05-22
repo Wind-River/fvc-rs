@@ -212,6 +212,27 @@ pub enum Collection {
     Empty
 }
 
+impl serde::Serialize for Collection {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+        match self {
+            Collection::Empty => {
+                serializer.serialize_none()
+            },
+            Collection::File(file) => {
+                file.serialize(serializer)
+            },
+            Collection::Archive(archive) => {
+                archive.serialize(serializer)
+            },
+            Collection::Directory(directory)=> {
+                directory.serialize(serializer)
+            }
+        }
+    }
+}
+
 // get_sha256 calculates and returns an array of bytes represeting the sha256 of the given file
 fn get_sha256<P: AsRef<Path>>(path: P) -> std::io::Result<[u8; 32]> {
     use sha2::{Sha256, Digest};
