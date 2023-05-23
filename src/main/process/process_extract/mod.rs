@@ -25,7 +25,6 @@ use walkdir::WalkDir;
 use hex::ToHex;
 use file_verification_code::archive_tree::{Directory, Archive, File, Collection};
 
-
 pub struct ExtractionProcessor {
     extract_policy: ExtractPolicy,
 }
@@ -93,7 +92,7 @@ impl ExtractionProcessor {
                         };
                         // extract and process directory
                         match open_archive(&file_path) {
-                            ExtractResult::Ok(extracted_directory) => {
+                            Ok(extracted_directory) => {
                                 match self.calculate_fvc_of(graph, Some(sha256), extracted_directory.path()) {
                                     Ok(collection) => {
                                         match collection {
@@ -117,8 +116,10 @@ impl ExtractionProcessor {
                                     Err(err) => return Err(err)
                                 }
                             },
-                            ExtractResult::IOError(err) => return Err(err),
-                            ExtractResult::ArchiveError(err) => panic!("archive error for known archive: {}", err)
+                            Err(err) => match err {
+                                compress_tools::Error::Io(err) => return Err(err),
+                                _ => panic!("archive error for known archive: {}", err)
+                            }
                         }
 
                     },
@@ -130,7 +131,7 @@ impl ExtractionProcessor {
                         };
                         // extract and process directory
                         match open_archive(&file_path) {
-                            ExtractResult::Ok(extracted_directory) => {
+                            Ok(extracted_directory) => {
                                 match self.calculate_fvc_of(graph, Some(sha256), extracted_directory.path()) {
                                     Ok(collection) => {
                                         match collection {
@@ -154,8 +155,10 @@ impl ExtractionProcessor {
                                     Err(err) => return Err(err)
                                 }
                             },
-                            ExtractResult::IOError(err) => return Err(err),
-                            ExtractResult::ArchiveError(err) => panic!("archive error for known archive: {}", err)
+                            Err(err) => match err {
+                                compress_tools::Error::Io(err) => return Err(err),
+                                _ => panic!("archive error for known archive: {}", err)
+                            }
                         }
                     }
                     (false, _) => ()
@@ -171,11 +174,11 @@ impl ExtractionProcessor {
                             Err(err) => return Err(err)
                         };
                         match open_archive(&file_path) {
-                            ExtractResult::IOError(err) => return Err(err),
-                            ExtractResult::ArchiveError(_err) => {
-                                debug!("error extracting 100 confidence archive: {}", file_path.as_ref().display());
+                            Err(err) => match err {
+                                compress_tools::Error::Io(err) => return Err(err),
+                                _ => debug!("error extracting 100 confidence archive: {}", file_path.as_ref().display())
                             },
-                            ExtractResult::Ok(extracted_directory) => {
+                            Ok(extracted_directory) => {
                                 graph.insert(sha256);
                                 match self.calculate_fvc_of(graph, Some(sha256), extracted_directory.path()) {
                                     Ok(collection) => {
@@ -205,9 +208,11 @@ impl ExtractionProcessor {
                     (_, _confidence) => {
                         // for now, we try to extract anything over 0, so this arm is the same as ExtractPolicy::All
                         match open_archive(&file_path) {
-                            ExtractResult::IOError(err) => return Err(err),
-                            ExtractResult::ArchiveError(_err) => (),
-                            ExtractResult::Ok(extracted_directory) => {
+                            Err(err) => match err {
+                                compress_tools::Error::Io(err) => return Err(err),
+                                _ => ()
+                            },
+                            Ok(extracted_directory) => {
                                 graph.insert(sha256);
                                 let mut archive = match Archive::new(&file_path, None, Some(sha256)) {
                                     Ok(archive) => archive,
@@ -330,12 +335,6 @@ impl ExtractionProcessor {
     }
 }
 
-enum ExtractResult {
-    Ok(tempdir::TempDir),
-    IOError(std::io::Error),
-    ArchiveError(libarchive::error::ArchiveError)
-}
-
 // get_sha256 calculates and returns an array of bytes represeting the sha256 of the given file
 fn get_sha256<P: AsRef<Path>>(path: P) -> std::io::Result<[u8; 32]> {
     use sha2::{Sha256, Digest};
@@ -360,27 +359,27 @@ fn get_sha256<P: AsRef<Path>>(path: P) -> std::io::Result<[u8; 32]> {
 
 // open archive creates a temporary directory and extracts the given archive to it
 // in the case of an extraction error, the temporary directory is cleaned-up here, otherwise it needs to be cleaned up by the receiever
-fn open_archive<P: AsRef<Path>>(archive_path: P) -> ExtractResult {
+fn open_archive<P: AsRef<Path>>(archive_path: P) -> compress_tools::Result<tempdir::TempDir> {
     let tmp_prefix = match archive_path.as_ref().file_name() {
         Some(file_name) => format!("fvc_extracted_archive.{:?}", file_name),
         None => format!("fvc_extracted_archive.{:?}", archive_path.as_ref())
     };
     let tmp = match tempdir::TempDir::new(&tmp_prefix) {
         Ok(tmp) => tmp,
-        Err(err) => return ExtractResult::IOError(err)
+        Err(err) => return Err(compress_tools::Error::Io(err))
     };
 
     match extract::extract_archive(&archive_path, tmp.as_ref()) {
         Ok(()) => {
             info!("extracted archive {}", archive_path.as_ref().display());
-            ExtractResult::Ok(tmp)
+            Ok(tmp)
         },
         Err(err) => {
             match tmp.close() { // explicitly clean-up tmp directory to be able to log errors
                 Ok(()) => (),
                 Err(err) => debug!("error closing tmp directory: {}", err)
             };
-            ExtractResult::ArchiveError(err)
+            Err(err)
         }
     }
 }

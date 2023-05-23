@@ -116,26 +116,4 @@ mod tests {
         let result = hasher.hex();
         assert_eq!(result, "4656433200ad460448a5947428e2c3e98adfe45915d71f7a4b399910fed1022cc4e1cdc374");
     }
-    #[test]
-    fn fvc2_hasher_foo_bar_zap() -> Result<(), std::io::Error> {
-        let foo_txt = include_bytes!("test_data/foo.txt");
-        let bar_txt = include_bytes!("test_data/bar.txt");
-        let zap_txt = include_bytes!("test_data/zap.txt");
-        let files = [foo_txt, bar_txt, zap_txt];
-
-        let mut hasher = FVC2Hasher::new();
-        for sha256 in files.iter() {
-            match hasher.read(&sha256[..]) {
-                Ok(_size) => (),
-                Err(e) => {
-                    return Err(e);
-                }
-            };
-        }
-
-        let result = hasher.hex();
-        assert_eq!(result, "4656433200ad460448a5947428e2c3e98adfe45915d71f7a4b399910fed1022cc4e1cdc374");
-
-        Ok(())
-    }
 }

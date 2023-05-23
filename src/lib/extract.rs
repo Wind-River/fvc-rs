@@ -10,29 +10,18 @@
 
 //! extract calls libarchive to extract the given archive
 
-use libarchive::archive;
-use libarchive::reader;
-use libarchive::writer;
-
+use std::fs::File;
+use compress_tools::{uncompress_archive, Ownership, Result, Error};
 use std::path::Path;
 
 /// extract_archive uses libarchive to extract src to dst
-pub fn extract_archive<S: AsRef<Path>, D: AsRef<Path>>(src: S, dst: D) -> Result<(), libarchive::error::ArchiveError> {
-    let mut builder = reader::Builder::default();
-    builder.support_format(archive::ReadFormat::All).expect("support all formats");
-    builder.support_filter(archive::ReadFilter::All).expect("support all filters");
-
-    let mut reader = match builder.open_file(src) {
-        Ok(reader) => reader,
-        Err(err) => return Err(err)
+pub fn extract_archive<S: AsRef<Path>, D: AsRef<Path>>(src: S, dst: D) -> Result<()> {
+    let source = match File::open(src) {
+        Ok(file) => file,
+        Err(err) => return Err(Error::Io(err))
     };
 
-    let writer = writer::Disk::new();
-
-    match writer.write(&mut reader, dst.as_ref().to_str()) {
-        Ok(_size) => Ok(()),
-        Err(err) => Err(err)
-    }
+    uncompress_archive(source, dst.as_ref(), Ownership::Ignore)
 }
 
 // list of known archive extensions
